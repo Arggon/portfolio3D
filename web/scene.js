@@ -540,7 +540,7 @@ export class World {
     );
     screen.position.z = 0.03;
     monitor.add(screen);
-    monitor.position.set(10.85, 1.47, 11.55);
+    monitor.position.set(10.85, 1.43, 11.55);
     monitor.rotation.y = 0;
     g.add(monitor);
 
@@ -548,7 +548,7 @@ export class World {
     const paperMat = new THREE.MeshStandardMaterial({ color: 0xd8d2c4, roughness: 0.9 });
     for (let i = 0; i < 3; i += 1) {
       const paper = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 0.26), paperMat);
-      paper.position.set(13.0 + i * 0.02, 1.18 + i * 0.022, 11.72 + i * 0.015);
+      paper.position.set(13.0 + i * 0.02, 1.165 + i * 0.022, 11.72 + i * 0.015);
       paper.rotation.y = i * 0.14;
       paper.castShadow = true;
       g.add(paper);
@@ -851,7 +851,7 @@ export class World {
     foot.position.y = -0.56;
     monitor.add(foot);
 
-    monitor.position.set(cx + inward * 0.35, 1.16, cz);
+    monitor.position.set(cx + inward * 0.35, 1.395, cz);
     monitor.rotation.y = side === 0 ? Math.PI / 2 : -Math.PI / 2;
     group.add(monitor);
 
@@ -875,14 +875,14 @@ export class World {
       new THREE.CylinderGeometry(0.09, 0.07, 0.13, 8),
       new THREE.MeshStandardMaterial({ color: 0x6b4a35, roughness: 0.9 }),
     );
-    pot.position.set(cx + inward * -0.72, 0.86, cz - 0.36);
+    pot.position.set(cx + inward * -0.72, 0.885, cz - 0.36);
     group.add(pot);
     const succulent = new THREE.Mesh(
       new THREE.SphereGeometry(0.1, 8, 6),
       new THREE.MeshStandardMaterial({ color: 0x3f7a4f, roughness: 1 }),
     );
     succulent.scale.y = 0.7;
-    succulent.position.set(cx + inward * -0.72, 0.96, cz - 0.36);
+    succulent.position.set(cx + inward * -0.72, 0.985, cz - 0.36);
     succulent.castShadow = true;
     group.add(succulent);
 
@@ -908,7 +908,7 @@ export class World {
       foot.rotation.y = -a;
       chair.add(foot);
     }
-    chair.position.set(cx + inward * -0.95, 0, cz + 0.05);
+    chair.position.set(cx + inward * -1.85, 0, cz + 0.05);
     chair.rotation.y = side === 0 ? -0.35 : Math.PI + 0.35;
     group.add(chair);
 
@@ -937,11 +937,11 @@ export class World {
     panelGroup.add(frame);
 
     // tiny desk-side pylon so the panel reads as furniture, not a floating bug
-    const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.1, 8), metalMat);
-    pylon.position.set(cx + inward * 0.85, 1.0, cz - 0.5);
+    const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.72, 8), metalMat);
+    pylon.position.set(cx + inward * 0.85, 1.18, cz - 0.5);
     group.add(pylon);
     const emitter = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), accentMat);
-    emitter.position.set(cx + inward * 0.85, 1.5, cz - 0.5);
+    emitter.position.set(cx + inward * 0.85, 1.54, cz - 0.5);
     group.add(emitter);
 
     panelGroup.position.set(cx + inward * 0.92, 2.0, cz);

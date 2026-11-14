@@ -138,11 +138,43 @@ def inside_props(+x: U32, +y: U32, ps: List<Prop>) -> Bool:
     case Con{p, rest}:
       Bool.or(Prop.hit(p, x, y), inside_props(x, y, rest))
 
+def Desk.hit(d: Desk, +x: U32, +y: U32) -> Bool:
+  match d:
+    case Desk{_, +px, +py, +pw, +ph, _, _}:
+      +r = radius()
+      Bool.and(
+        Bool.and(
+          U32.is_gt(U32.add(x, r), px),
+          U32.is_lt(x, U32.add(U32.add(px, pw), r))),
+        Bool.and(
+          U32.is_gt(U32.add(y, r), py),
+          U32.is_lt(y, U32.add(U32.add(py, ph), r))))
+
+def Desk.chair_hit(d: Desk, +x: U32, +y: U32) -> Bool:
+  match d:
+    case Desk{_, +px, +py, +pw, +ph, _, +side}:
+      +cx = U32.add(px, U32.div(pw, 2))
+      +cy = U32.add(py, U32.div(ph, 2))
+      +chx = pick_u32(U32.is_eq(side, 0), U32.sub(cx, 185), U32.add(cx, 185))
+      Desk.hit(Desk{0, U32.sub(chx, 28), U32.sub(cy, 28), 56, 56, 0, 0}, x, y)
+
+def inside_desks(+x: U32, +y: U32, ds: +List<Desk>) -> Bool:
+  match ds:
+    case Nil{}:
+      False{}
+    case Con{+d, rest}:
+      Bool.or(
+        Bool.or(Desk.hit(d, x, y), Desk.chair_hit(d, x, y)),
+        inside_desks(x, y, rest))
+
+def blocked(+x: U32, +y: U32) -> Bool:
+  Bool.or(inside_props(x, y, Prop.list()), inside_desks(x, y, Desk.list()))
+
 def try_x(+px: U32, +py: U32, +nx: U32) -> Vec:
-  Vec{pick_u32(inside_props(nx, py, Prop.list()), px, nx), py}
+  Vec{pick_u32(blocked(nx, py), px, nx), py}
 
 def try_y(+x: U32, +y: U32, +ny: U32) -> U32:
-  pick_u32(inside_props(x, ny, Prop.list()), y, ny)
+  pick_u32(blocked(x, ny), y, ny)
 
 # Slide the avatar from (x, y) towards (nx, ny), one axis at a time,
 # clamped to the room and pushed out of every piece of furniture.
@@ -252,7 +284,7 @@ def Desks.all_in_room(ds: +List<Desk>) -> Bool:
 def start_clear.at(v: Vec) -> Bool:
   match v:
     case Vec{+x, +y}:
-      Bool.and(inside_room(x, y), Bool.not(inside_props(x, y, Prop.list())))
+      Bool.and(inside_room(x, y), Bool.not(blocked(x, y)))
 
 def start_clear() -> Bool:
   start_clear.at(start())
