@@ -2,7 +2,7 @@
 // This is the offline snapshot; the page still refreshes from GitHub live.
 export const GITHUB_USER = "Arggon";
 export const GITHUB_URL = "https://github.com/Arggon";
-export const CV_URL = "https://github.com/Arggon/arggon-cv";
+export const CV_URL = "https://arggon.github.io/arggon-cv/";
 export const SNAPSHOT_AT = "2026-11-14T17:28:44.567Z";
 export const PROJECTS = [
   {
@@ -104,7 +104,7 @@ export const PROJECTS = [
     "language": "JavaScript",
     "stars": 0,
     "forks": 0,
-    "homepage": null,
+    "homepage": "https://arggondev.itch.io/ember-ascent",
     "topics": [],
     "updated": "2026-10-18",
     "url": "https://github.com/Arggon/ember-ascent"

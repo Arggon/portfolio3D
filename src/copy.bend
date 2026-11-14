@@ -79,7 +79,7 @@ def ui() -> Copy:
     Line{"Inspect", "Inspeccionar"},
     Line{"Close", "Cerrar"},
     Line{"Open repository", "Abrir repositorio"},
-    Line{"Live demo", "Ver demo"},
+    Line{"Open site", "Abrir sitio"},
     Line{"ABOUT GONZALO", "SOBRE GONZALO"},
     Line{"Full-stack developer from Argentina. Backends that hold up, tools that remove busywork, and games that ship. This office is a Bend program: its layout, collision and copy are checked by the compiler.", "Desarrollador full stack argentino. Backends que aguantan, herramientas que sacan trabajo de encima y juegos que se publican. Esta oficina es un programa en Bend: su diseño, colisiones y textos están verificados por el compilador."},
     Line{"github.com/Arggon", "github.com/Arggon"},

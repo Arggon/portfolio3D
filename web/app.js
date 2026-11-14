@@ -440,7 +440,7 @@ function applyRepos(repos) {
     project.language = repo.language || project.language;
     project.stars = repo.stargazers_count || 0;
     project.topics = repo.topics || [];
-    project.homepage = repo.homepage || "";
+    project.homepage = repo.homepage || project.homepage;
     project.updated = (repo.updated_at || "").slice(0, 10);
     project.url = repo.html_url || project.url;
   }

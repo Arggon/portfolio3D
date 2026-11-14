@@ -10,7 +10,7 @@ import { writeFile } from "node:fs/promises";
 
 const USER = "Arggon";
 const GITHUB_URL = `https://github.com/${USER}`;
-const CV_URL = `https://github.com/${USER}/arggon-cv`;
+const CV_URL = "https://arggon.github.io/arggon-cv/";
 const REPOS = [
   "dotnet-batchyard",
   "cuentas-claras",
@@ -19,6 +19,11 @@ const REPOS = [
   "estanteria",
   "ember-ascent",
 ];
+
+// GitHub does not always carry the deployed game URL.
+const HOMEPAGES = {
+  "ember-ascent": "https://arggondev.itch.io/ember-ascent",
+};
 
 const headers = {
   Accept: "application/vnd.github+json",
@@ -51,7 +56,7 @@ const projects = REPOS.map((name) => {
     language: repo.language,
     stars: repo.stargazers_count,
     forks: repo.forks_count,
-    homepage: repo.homepage,
+    homepage: HOMEPAGES[name] ?? repo.homepage ?? null,
     topics: repo.topics ?? [],
     updated: (repo.updated_at ?? "").slice(0, 10),
     url: repo.html_url,
