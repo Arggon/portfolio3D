@@ -6,9 +6,9 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
 export const PRESETS = [
-  { id: 0, key: "ava", height: 1.68, shoulder: 0.46, hair: "long" },
-  { id: 1, key: "max", height: 1.78, shoulder: 0.54, hair: "short" },
-  { id: 2, key: "rin", height: 1.64, shoulder: 0.48, hair: "beanie" },
+  { id: 0, key: "ava", height: 1.68, shoulder: 0.46, hair: "long", skin: 0xc98b62, hairColor: 0x2b1b16, eyes: 0x4a3022 },
+  { id: 1, key: "max", height: 1.78, shoulder: 0.54, hair: "short", skin: 0xb87a55, hairColor: 0x151216, eyes: 0x30221a },
+  { id: 2, key: "rin", height: 1.64, shoulder: 0.48, hair: "bun", skin: 0xe0b18a, hairColor: 0x2a1b18, eyes: 0x3a2a20 },
 ];
 
 export const PALETTE = [
@@ -973,131 +973,347 @@ export class World {
   setAvatar({ preset = 0, color = PALETTE[0] }) {
     this.avatarPreset = preset;
     this.avatarColor = color;
+    this.eyeGroups = [];
+    this.kneeL = null;
+    this.kneeR = null;
+
     if (this.avatarBody) {
-      this.avatar.remove(this.avatarBody);
+      const geos = new Set();
+      const mats = new Set();
       this.avatarBody.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
-        if (o.material) o.material.dispose();
+        if (o.geometry) geos.add(o.geometry);
+        if (o.material) {
+          const list = Array.isArray(o.material) ? o.material : [o.material];
+          for (const m of list) if (m) mats.add(m);
+        }
       });
+      geos.forEach((g) => g.dispose());
+      mats.forEach((m) => m.dispose());
+      this.avatar.remove(this.avatarBody);
     }
+
     const cfg = PRESETS[preset] || PRESETS[0];
     const g = new THREE.Group();
-    const outfit = new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
-    const outfitDark = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(color).multiplyScalar(0.55),
-      roughness: 0.9,
-    });
-    const skin = new THREE.MeshStandardMaterial({ color: 0xd9a97f, roughness: 0.75 });
-    const hairMat = new THREE.MeshStandardMaterial({ color: 0x18141c, roughness: 0.9 });
-    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x101014, roughness: 0.6 });
-
     const shoulder = cfg.shoulder;
-    const hip = 0.78;
 
-    const pelvis = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.14, 4, 10), outfitDark);
-    pelvis.position.y = hip;
-    pelvis.castShadow = true;
-    g.add(pelvis);
+    const suit = new THREE.MeshStandardMaterial({ color, roughness: 0.72 });
+    const suitDark = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(color).multiplyScalar(0.58),
+      roughness: 0.8,
+    });
+    const trousers = new THREE.MeshStandardMaterial({ color: 0x262733, roughness: 0.88 });
+    const shirt = new THREE.MeshStandardMaterial({ color: 0xe9e5d8, roughness: 0.78 });
+    const skin = new THREE.MeshStandardMaterial({ color: cfg.skin, roughness: 0.64 });
+    const skinShade = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(cfg.skin).multiplyScalar(0.88),
+      roughness: 0.7,
+    });
+    const hair = new THREE.MeshStandardMaterial({ color: cfg.hairColor, roughness: 0.92 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x0c0c11, roughness: 0.94, metalness: 0.0 });
+    const soleMat = new THREE.MeshStandardMaterial({ color: 0x07070a, roughness: 0.9 });
+    const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xf4f0e7, roughness: 0.4 });
+    const irisMat = new THREE.MeshStandardMaterial({ color: cfg.eyes, roughness: 0.45 });
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x0c0a10 });
+    const badgeMat = new THREE.MeshStandardMaterial({ color: 0xf3efe5, roughness: 0.55 });
+    const tieMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(color).multiplyScalar(0.42),
+      roughness: 0.68,
+    });
 
-    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.34, 5, 12), outfit);
-    torso.position.y = 1.12;
-    torso.scale.x = shoulder / 0.42;
-    torso.castShadow = true;
-    g.add(torso);
-    // collar
-    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.06, 10), outfitDark);
-    collar.position.y = 1.4;
-    g.add(collar);
+    const add = (geo, mat, x, y, z, parent = g) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      parent.add(m);
+      return m;
+    };
+    const box = (w, h, d, mat, x, y, z, parent = g) =>
+      add(new THREE.BoxGeometry(w, h, d), mat, x, y, z, parent);
+    const sphere = (r, mat, x, y, z, parent = g, seg = 20) =>
+      add(new THREE.SphereGeometry(r, seg, Math.round(seg * 0.72)), mat, x, y, z, parent);
+    const capsule = (r, len, mat, x, y, z, parent = g) =>
+      add(new THREE.CapsuleGeometry(r, len, 6, 12), mat, x, y, z, parent);
+    const cylinder = (rt, rb, h, mat, x, y, z, parent = g, seg = 18) =>
+      add(new THREE.CylinderGeometry(rt, rb, h, seg), mat, x, y, z, parent);
 
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.065, 0.09, 8), skin);
-    neck.position.y = 1.45;
-    g.add(neck);
+    /* ---------- legs: hip, thigh, knee, calf, shoe ---------- */
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 18, 14), skin);
-    head.scale.set(1, 1.08, 0.98);
-    head.position.y = 1.57;
-    head.castShadow = true;
-    g.add(head);
+    const makeLeg = (sideSign) => {
+      const hip = new THREE.Group();
+      hip.position.set(sideSign * 0.105, 0.88, 0);
+      g.add(hip);
 
-    // a face, just enough to give the silhouette a front
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x171420 });
-    for (const dx of [-0.055, 0.055]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.019, 8, 6), eyeMat);
-      eye.scale.set(0.9, 1.15, 0.6);
-      eye.position.set(dx, 1.6, 0.142);
-      g.add(eye);
-      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.009, 0.012), hairMat);
-      brow.position.set(dx, 1.645, 0.146);
-      brow.rotation.z = dx < 0 ? 0.08 : -0.08;
-      g.add(brow);
+      const thigh = capsule(0.083, 0.26, trousers, 0, -0.20, 0, hip);
+      thigh.scale.z = 0.94;
+      sphere(0.06, trousers, 0, -0.40, 0, hip, 14);
+      const knee = new THREE.Group();
+      knee.position.y = -0.40;
+      hip.add(knee);
+
+      const calf = capsule(0.061, 0.25, trousers, 0, -0.18, 0, knee);
+      calf.scale.z = 0.9;
+      const sock = cylinder(0.06, 0.063, 0.08, trousers, 0, -0.34, 0, knee, 12);
+      sock.scale.z = 0.9;
+      const shoe = new THREE.Group();
+      shoe.position.set(0, -0.41, 0.03);
+      knee.add(shoe);
+
+      const upper = capsule(0.062, 0.14, shoeMat, 0, 0.005, 0.03, shoe);
+      upper.rotation.x = Math.PI / 2;
+      upper.scale.set(0.95, 1.0, 0.58);
+      const toe = sphere(0.055, shoeMat, 0, 0.0, 0.15, shoe, 16);
+      toe.scale.set(1.0, 0.32, 1.05);
+      const sole = box(0.134, 0.025, 0.255, soleMat, 0, -0.045, 0.028, shoe);
+      sole.scale.z = 0.98;
+      box(0.12, 0.035, 0.06, soleMat, 0, -0.043, -0.08, shoe);
+      box(0.052, 0.006, 0.01, new THREE.MeshStandardMaterial({ color: 0x55525e, roughness: 0.7 }), 0, 0.043, 0.055, shoe);
+
+      return { hip, knee };
+    };
+    const legL = makeLeg(-1);
+    const legR = makeLeg(1);
+    this.legL = legL.hip;
+    this.legR = legR.hip;
+    this.kneeL = legL.knee;
+    this.kneeR = legR.knee;
+
+    /* ---------- hips and trousers ---------- */
+
+    const pelvis = cylinder(0.155, 0.17, 0.22, trousers, 0, 0.85, 0);
+    pelvis.scale.z = 0.82;
+    sphere(0.08, trousers, -0.105, 0.88, 0, g, 14);
+    sphere(0.08, trousers, 0.105, 0.88, 0, g, 14);
+
+    /* ---------- shirt, tie, suit ---------- */
+
+    const torso = cylinder(0.23, 0.16, 0.44, suit, 0, 1.14, 0, g, 24);
+    const torsoWide = 1 + (shoulder - 0.46) * 0.8;
+    torso.scale.set(torsoWide, 1, 0.76);
+
+    const chest = sphere(0.23, suit, 0, 1.35, 0, g, 24);
+    chest.scale.set(torsoWide, 0.46, 0.8);
+
+    const hem = cylinder(0.19, 0.198, 0.12, suit, 0, 0.965, 0, g, 24);
+    hem.scale.set(torsoWide, 1, 0.8);
+
+    // open jacket: a white shirt V with a tie and lapels
+    const shirtShape = new THREE.Shape();
+    shirtShape.moveTo(-0.072, 1.365);
+    shirtShape.lineTo(0.072, 1.365);
+    shirtShape.lineTo(0, 1.115);
+    shirtShape.closePath();
+    const shirtV = new THREE.Mesh(new THREE.ShapeGeometry(shirtShape), shirt);
+    shirtV.position.z = 0.161;
+    shirtV.castShadow = false;
+    g.add(shirtV);
+
+    for (const side of [-1, 1]) {
+      const lapel = box(0.062, 0.21, 0.016, suitDark, side * 0.085, 1.265, 0.166);
+      lapel.rotation.z = side * 0.24;
+      const collar = box(0.075, 0.026, 0.03, suitDark, side * 0.06, 1.39, 0.145);
+      collar.rotation.z = side * 0.42;
     }
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.008, 0.008),
-      new THREE.MeshBasicMaterial({ color: 0x8a5a4a }));
-    mouth.position.set(0, 1.535, 0.149);
-    g.add(mouth);
+
+    const tieKnot = box(0.045, 0.036, 0.014, tieMat, 0, 1.36, 0.176);
+    const tie = box(0.036, 0.195, 0.012, tieMat, 0, 1.245, 0.176);
+    tie.rotation.x = 0.02;
+
+    // buttons, pockets and seams
+    for (const y of [1.06, 0.985]) {
+      const button = sphere(0.011, suitDark, 0.038, y, 0.157, g, 8);
+      button.scale.z = 0.6;
+    }
+    for (const side of [-1, 1]) {
+      const pocket = box(0.085, 0.018, 0.01, suitDark, side * 0.115, 1.0, 0.15);
+      pocket.rotation.z = side * 0.02;
+    }
+    box(0.007, 0.31, 0.008, suitDark, 0, 1.09, 0.157);
+    box(0.007, 0.29, 0.008, suitDark, 0, 1.11, -0.157);
+    box(0.26, 0.007, 0.008, suitDark, 0, 1.3, -0.157);
+    const backVent = box(0.006, 0.16, 0.008, suitDark, 0, 0.97, -0.157);
+    backVent.rotation.x = 0;
+
+    /* ---------- neck, collar, head ---------- */
+
+    cylinder(0.052, 0.059, 0.11, skin, 0, 1.43, 0, g, 12);
+    const shirtCollar = cylinder(0.072, 0.078, 0.03, shirt, 0, 1.405, 0, g, 14);
+    shirtCollar.scale.z = 0.9;
+
+    const head = sphere(0.145, skin, 0, 1.62, 0, g, 28);
+    head.scale.set(0.92, 1.03, 0.94);
+    const jaw = sphere(0.10, skin, 0, 1.56, 0.012, g, 20);
+    jaw.scale.set(0.98, 0.6, 0.86);
+
+    for (const side of [-1, 1]) {
+      const ear = sphere(0.028, skinShade, side * 0.138, 1.605, -0.002, g, 12);
+      ear.scale.set(0.52, 1.0, 0.78);
+    }
+
+    const makeEye = (x) => {
+      const eg = new THREE.Group();
+      eg.position.set(x, 1.648, 0.128);
+      g.add(eg);
+      const white = sphere(0.018, eyeWhite, 0, 0, 0, eg, 16);
+      white.scale.set(1, 0.68, 0.5);
+      white.castShadow = false;
+      add(new THREE.SphereGeometry(0.0088, 12, 9), irisMat, 0, 0, 0.008, eg).castShadow = false;
+      add(new THREE.SphereGeometry(0.0042, 8, 6), pupilMat, 0, 0, 0.0125, eg).castShadow = false;
+      add(new THREE.SphereGeometry(0.0022, 6, 4), eyeWhite, 0.0032, 0.003, 0.015, eg).castShadow = false;
+      const lid = box(0.04, 0.007, 0.012, skinShade, x, 1.661, 0.132);
+      lid.rotation.z = x < 0 ? 0.05 : -0.05;
+      this.eyeGroups.push(eg);
+    };
+    makeEye(-0.05);
+    makeEye(0.05);
+
+    for (const side of [-1, 1]) {
+      const brow = box(0.046, 0.0055, 0.011, hair, side * 0.05, 1.678, 0.13);
+      brow.rotation.z = side * -0.1;
+    }
+
+    const nose = sphere(0.017, skinShade, 0, 1.602, 0.141, g, 12);
+    nose.scale.set(0.9, 1.15, 0.95);
+    const smile = new THREE.Mesh(
+      new THREE.TorusGeometry(0.026, 0.0032, 6, 18, Math.PI * 0.72),
+      new THREE.MeshStandardMaterial({ color: 0x8d5148, roughness: 0.62 }),
+    );
+    smile.position.set(0, 1.568, 0.141);
+    smile.rotation.z = Math.PI;
+    smile.castShadow = false;
+    g.add(smile);
+
+    /* ---------- hair ---------- */
+
+    const tuft = (x, y, z, sx, sy, sz, rz = 0) => {
+      const m = sphere(0.05, hair, x, y, z, g, 14);
+      m.scale.set(sx, sy, sz);
+      m.rotation.z = rz;
+      return m;
+    };
+    const backShell = (scaleY = 1) => {
+      const m = sphere(0.148, hair, 0, 1.615, -0.052, g, 22);
+      m.scale.set(1.0, 0.9 * scaleY, 0.6);
+      return m;
+    };
+    const sideHair = (side) => {
+      const m = sphere(0.05, hair, side * 0.145, 1.615, 0.008, g, 12);
+      m.scale.set(0.55, 1.5, 0.85);
+      m.rotation.z = side * 0.08;
+      return m;
+    };
 
     if (cfg.hair === "long") {
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.163, 16, 12), hairMat);
-      cap.scale.set(1.02, 0.92, 1.02);
-      cap.position.set(0, 1.65, -0.015);
-      cap.castShadow = true;
-      g.add(cap);
-      const backHair = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.26, 4, 10), hairMat);
-      backHair.position.set(0, 1.42, -0.13);
-      backHair.castShadow = true;
-      g.add(backHair);
+      const cap = add(new THREE.SphereGeometry(0.152, 26, 18, 0, Math.PI * 2, 0, Math.PI * 0.34), hair, 0, 1.62, -0.004);
+      cap.scale.set(1.03, 1.0, 1.03);
+      tuft(-0.085, 1.706, 0.108, 1.08, 0.38, 0.72, -0.16);
+      tuft(-0.008, 1.703, 0.112, 1.0, 0.34, 0.66, 0.04);
+      tuft(0.073, 1.698, 0.103, 0.88, 0.3, 0.6, 0.16);
+      for (const side of [-1, 1]) {
+        sideHair(side);
+        const lock = capsule(0.032, 0.2, hair, side * 0.122, 1.48, 0.018);
+        lock.rotation.z = side * 0.04;
+      }
+      backShell(1.0);
+      const back = capsule(0.082, 0.2, hair, 0, 1.48, -0.11);
+      back.scale.set(1.15, 1, 0.72);
+      const pony = capsule(0.052, 0.2, hair, 0, 1.34, -0.17);
+      pony.rotation.x = -0.22;
+      const band = cylinder(0.053, 0.053, 0.025, suitDark, 0, 1.455, -0.14, g, 12);
+      band.rotation.x = Math.PI / 2;
     } else if (cfg.hair === "short") {
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat);
-      cap.position.set(0, 1.66, -0.01);
-      cap.castShadow = true;
-      g.add(cap);
+      const cap = add(new THREE.SphereGeometry(0.152, 26, 18, 0, Math.PI * 2, 0, Math.PI * 0.36), hair, 0, 1.62, -0.004);
+      cap.scale.set(1.03, 1.0, 1.03);
+      tuft(-0.085, 1.703, 0.108, 1.0, 0.36, 0.65, -0.12);
+      tuft(-0.012, 1.707, 0.112, 1.1, 0.4, 0.7, 0.02);
+      tuft(0.06, 1.702, 0.105, 0.9, 0.34, 0.6, 0.14);
+      for (const side of [-1, 1]) {
+        sideHair(side);
+        const sideburn = box(0.02, 0.06, 0.024, hair, side * 0.138, 1.595, 0.04);
+        sideburn.rotation.z = side * 0.05;
+      }
+      backShell(0.92);
+      const nape = sphere(0.07, hair, 0, 1.555, -0.105, g, 12);
+      nape.scale.set(1.2, 0.6, 0.5);
     } else {
-      const beanie = new THREE.Mesh(new THREE.CylinderGeometry(0.158, 0.166, 0.14, 14), outfitDark);
-      beanie.position.y = 1.7;
-      beanie.castShadow = true;
-      g.add(beanie);
-      const pom = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), outfit);
-      pom.position.y = 1.79;
-      g.add(pom);
+      const cap = add(new THREE.SphereGeometry(0.152, 26, 18, 0, Math.PI * 2, 0, Math.PI * 0.36), hair, 0, 1.62, -0.004);
+      cap.scale.set(1.03, 1.0, 1.03);
+      tuft(-0.08, 1.705, 0.108, 1.0, 0.36, 0.65, -0.12);
+      tuft(-0.005, 1.708, 0.112, 1.05, 0.38, 0.68, 0.02);
+      tuft(0.065, 1.703, 0.104, 0.9, 0.32, 0.6, 0.14);
+      for (const side of [-1, 1]) {
+        sideHair(side);
+        const strand = capsule(0.018, 0.09, hair, side * 0.12, 1.56, 0.045);
+        strand.rotation.z = side * 0.12;
+      }
+      backShell(0.96);
+      const nape = sphere(0.065, hair, 0, 1.56, -0.105, g, 12);
+      nape.scale.set(1.15, 0.6, 0.5);
+      const bun = sphere(0.058, hair, 0, 1.762, -0.058, g, 16);
+      bun.scale.set(1.0, 0.95, 1.0);
+      const tie = add(new THREE.TorusGeometry(0.043, 0.007, 6, 18), new THREE.MeshStandardMaterial({ color: 0x17151a, roughness: 0.8 }), 0, 1.732, -0.058, g);
+      tie.rotation.x = Math.PI / 2;
+      tie.scale.z = 0.95;
     }
+
+    /* ---------- lanyard and recruiter badge ---------- */
+
+    const cordMat = new THREE.MeshStandardMaterial({ color: 0x1b1c24, roughness: 0.7 });
+    for (const side of [-1, 1]) {
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.06, 1.445, 0.025),
+        new THREE.Vector3(side * 0.055, 1.35, 0.11),
+        new THREE.Vector3(side * 0.025, 1.27, 0.16),
+        new THREE.Vector3(0, 1.225, 0.182),
+      ]);
+      const cord = new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.005, 5, false), cordMat);
+      cord.castShadow = false;
+      g.add(cord);
+    }
+
+    const badge = box(0.062, 0.086, 0.012, badgeMat, 0, 1.175, 0.188);
+    badge.rotation.x = -0.04;
+    box(0.064, 0.018, 0.014, suitDark, 0, 1.211, 0.19);
+    box(0.019, 0.026, 0.014, suit, -0.016, 1.163, 0.195);
+    box(0.028, 0.0035, 0.014, new THREE.MeshStandardMaterial({ color: 0x4a4e5c, roughness: 0.6 }), 0.006, 1.175, 0.195);
+    box(0.028, 0.0035, 0.014, new THREE.MeshStandardMaterial({ color: 0x4a4e5c, roughness: 0.6 }), 0.006, 1.164, 0.195);
+
+    /* ---------- arms ---------- */
 
     const makeArm = (sideSign) => {
       const pivot = new THREE.Group();
-      pivot.position.set(sideSign * (shoulder / 2 + 0.015), 1.33, 0);
-      const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.24, 4, 8), outfit);
-      upper.position.y = -0.17;
-      upper.castShadow = true;
-      pivot.add(upper);
-      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), skin);
-      hand.position.y = -0.35;
-      hand.castShadow = true;
-      pivot.add(hand);
+      pivot.position.set(sideSign * (shoulder / 2 - 0.005), 1.335, 0);
+      pivot.rotation.z = sideSign * 0.06;
       g.add(pivot);
+
+      const upper = capsule(0.058, 0.19, suit, 0, -0.15, 0, pivot);
+      upper.scale.z = 0.95;
+      sphere(0.052, suit, 0, -0.30, 0, pivot, 12);
+
+      const elbow = new THREE.Group();
+      elbow.position.y = -0.30;
+      elbow.rotation.x = -0.14;
+      pivot.add(elbow);
+
+      const fore = capsule(0.052, 0.18, suit, 0, -0.115, 0, elbow);
+      fore.scale.z = 0.92;
+      const cuff = cylinder(0.052, 0.052, 0.02, shirt, 0, -0.215, 0, elbow, 12);
+      cuff.scale.z = 0.9;
+      const palm = sphere(0.045, skin, 0, -0.255, 0.004, elbow, 14);
+      palm.scale.set(1.0, 1.1, 0.7);
+      for (let i = 0; i < 4; i += 1) {
+        const finger = capsule(0.009, 0.028, skin, -0.018 + i * 0.012, -0.316, 0.006, elbow);
+        finger.scale.z = 0.8;
+        finger.castShadow = false;
+      }
+      const thumb = capsule(0.011, 0.022, skin, -sideSign * 0.032, -0.26, 0.022, elbow);
+      thumb.rotation.z = -sideSign * 0.6;
+      thumb.castShadow = false;
+      cylinder(0.053, 0.053, 0.012, new THREE.MeshStandardMaterial({ color: 0x1a1b23, roughness: 0.7 }), 0, -0.202, 0, elbow, 12);
+
       return pivot;
     };
     this.armL = makeArm(-1);
     this.armR = makeArm(1);
-
-    const makeLeg = (sideSign) => {
-      const pivot = new THREE.Group();
-      pivot.position.set(sideSign * 0.11, hip - 0.04, 0);
-      const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.28, 4, 8), outfitDark);
-      thigh.position.y = -0.2;
-      thigh.castShadow = true;
-      pivot.add(thigh);
-      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.24, 4, 8), outfitDark);
-      shin.position.y = -0.48;
-      shin.castShadow = true;
-      pivot.add(shin);
-      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.26), shoeMat);
-      shoe.position.set(0, -0.65, 0.05);
-      shoe.castShadow = true;
-      pivot.add(shoe);
-      g.add(pivot);
-      return pivot;
-    };
-    this.legL = makeLeg(-1);
-    this.legR = makeLeg(1);
 
     this.avatarBaseScale = cfg.height / 1.78;
     g.scale.setScalar(this.avatarBaseScale);
@@ -1415,12 +1631,17 @@ export class World {
     if (this.legL && this.legR) {
       this.legL.rotation.x = swing;
       this.legR.rotation.x = -swing;
-      this.armL.rotation.x = -swing * 0.8;
-      this.armR.rotation.x = swing * 0.8;
+      if (this.kneeL) this.kneeL.rotation.x = Math.max(0, -swing) * 0.9 + 0.035;
+      if (this.kneeR) this.kneeR.rotation.x = Math.max(0, swing) * 0.9 + 0.035;
+      const idle = 1 - moving;
+      this.armL.rotation.x = -swing * 0.75 + Math.sin(t * 1.15) * 0.018 * idle;
+      this.armR.rotation.x = swing * 0.75 + Math.sin(t * 1.15 + 1.3) * 0.018 * idle;
       this.avatarBody.position.y = Math.abs(Math.sin(this.walkPhase * 2)) * 0.03 * moving;
       this.avatarBody.rotation.z = Math.sin(this.walkPhase) * 0.015 * moving;
       const breathe = 1 + Math.sin(t * 1.6) * 0.008;
       this.avatarBody.scale.y = this.avatarBaseScale * breathe;
+      const blink = Math.sin(t * 1.35) > 0.994 ? 0.14 : 1;
+      for (const eye of this.eyeGroups) eye.scale.y = blink;
     }
 
     // turn towards movement
