@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08080d">
+<meta name="description" content="Arggon Labs, after hours — a playable 3D portfolio by Gonzalo Arganaraz. Six projects, one very late recruiter.">
+<title>Arggon Labs — after hours</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0b12'/%3E%3Cpath d='M8 24 16 8l8 16h-5l-3-7-3 7z' fill='%2335d0ff'/%3E%3C/svg%3E">
+
+<link rel="stylesheet" crossorigin href="./chunk-yvbjpcj8.css"><script type="module" crossorigin src="./chunk-rckm00kz.js"></script></head>
+<body>
+  <canvas id="scene" tabindex="-1" aria-label="A dark startup office at night, three dimensional, explorable"></canvas>
+  <div id="vignette" aria-hidden="true"></div>
+  <div id="grain" aria-hidden="true"></div>
+  <button id="btn-lang-intro" class="chip intro-lang" aria-label="Switch language">ES</button>
+
+  <main id="app">
+    <!-- HERO / LANDING -->
+    <section id="screen-hero" class="screen" aria-labelledby="hero-name">
+      <div class="hero-card">
+        <p class="kicker" id="hero-kicker"></p>
+        <h1 id="hero-name">GONZALO<br><span>ARGANARAZ</span></h1>
+        <p class="role" id="hero-role"></p>
+        <p class="lede" id="hero-intro"></p>
+        <ul class="hero-facts" id="hero-facts" aria-label="Portfolio facts"></ul>
+        <div class="links">
+          <a id="hero-github" href="https://github.com/Arggon" target="_blank" rel="noreferrer">GitHub ↗</a>
+          <a id="hero-cv" href="https://github.com/Arggon/arggon-cv" target="_blank" rel="noreferrer">CV ↗</a>
+        </div>
+        <div class="actions">
+          <button id="btn-enter" class="primary"></button>
+          <button id="btn-hero-skip" class="ghost"></button>
+        </div>
+      </div>
+      <p class="credits" id="hero-credits"></p>
+    </section>
+
+    <!-- STORY -->
+    <section id="screen-story" class="screen hidden" aria-labelledby="story-text">
+      <div class="story-card">
+        <p class="kicker" id="story-kicker"></p>
+        <p id="story-text" class="story-text" aria-live="polite"></p>
+        <div class="story-dots" id="story-dots" aria-hidden="true"></div>
+        <div class="actions">
+          <button id="btn-story-next" class="primary"></button>
+          <button id="btn-story-skip" class="ghost"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHARACTER CREATION -->
+    <section id="screen-create" class="screen hidden" aria-labelledby="create-title">
+      <div class="create-card" role="dialog" aria-modal="true">
+        <p class="kicker" id="create-kicker"></p>
+        <h2 id="create-title"></h2>
+        <p class="muted" id="create-sub"></p>
+
+        <label class="field" for="name-input">
+          <span id="name-label"></span>
+          <input id="name-input" maxlength="20" autocomplete="off" spellcheck="false">
+        </label>
+        <p id="name-error" class="error hidden" aria-live="polite"></p>
+
+        <fieldset>
+          <legend id="look-label"></legend>
+          <div class="presets" id="presets" role="radiogroup" aria-labelledby="look-label"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend id="color-label"></legend>
+          <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="color-label"></div>
+        </fieldset>
+
+        <div class="actions">
+          <button id="btn-back" class="ghost"></button>
+          <button id="btn-clock-in" class="primary"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- IN-GAME HUD -->
+    <div id="hud" class="hidden">
+      <div class="badge" id="badge">
+        <span class="badge-chip" id="badge-chip" aria-hidden="true"></span>
+        <span class="badge-text">
+          <strong id="player-name"></strong>
+          <small id="player-role"></small>
+        </span>
+      </div>
+      <div class="topbar">
+        <button id="btn-lang" class="chip" aria-label="Switch language">ES</button>
+        <button id="btn-sound" class="chip" aria-pressed="false" aria-label="Toggle sound">♪</button>
+        <button id="btn-about" class="chip" aria-label="About Gonzalo">i</button>
+      </div>
+      <div id="prompt" class="prompt hidden" aria-live="polite">
+        <span id="prompt-text"></span>
+        <kbd>E</kbd>
+      </div>
+      <p id="hint" class="hint"></p>
+      <p id="status" class="status" aria-live="polite"></p>
+      <div id="joystick" class="joystick hidden" aria-hidden="true"><span class="knob"></span></div>
+    </div>
+
+    <!-- PROJECT MODAL -->
+    <section id="modal-project" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="p-title">
+      <div class="modal-card project-card">
+        <button class="x" data-close aria-label="Close">&times;</button>
+        <p class="kicker" id="p-index"></p>
+        <h2 id="p-title"></h2>
+        <p id="p-desc"></p>
+        <div id="p-tags" class="chips"></div>
+        <p id="p-meta" class="muted"></p>
+        <div class="links">
+          <a id="p-repo" target="_blank" rel="noreferrer"></a>
+          <a id="p-live" target="_blank" rel="noreferrer" class="hidden"></a>
+        </div>
+        <div class="actions">
+          <button id="p-close" class="primary" data-close></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT MODAL -->
+    <section id="modal-about" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="a-title">
+      <div class="modal-card">
+        <button class="x" data-close aria-label="Close">&times;</button>
+        <p class="kicker">ARGGON LABS</p>
+        <h2 id="a-title"></h2>
+        <p id="a-body"></p>
+        <div class="links">
+          <a id="a-github" target="_blank" rel="noreferrer">GitHub ↗</a>
+          <a id="a-cv" target="_blank" rel="noreferrer">CV ↗</a>
+        </div>
+        <p class="muted small" id="a-credits"></p>
+        <p class="muted small" id="a-technical"></p>
+        <div class="actions">
+          <button id="a-restart" class="ghost"></button>
+          <button id="a-close" class="primary" data-close></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FATAL -->
+    <section id="screen-fatal" class="screen hidden" aria-live="assertive">
+      <div class="story-card">
+        <h2>WebGL is taking the night off.</h2>
+        <p class="muted">This portfolio needs a browser with WebGL 2. The project list is still online:</p>
+        <div class="links">
+          <a href="https://github.com/Arggon" target="_blank" rel="noreferrer">github.com/Arggon ↗</a>
+          <a href="https://github.com/Arggon/arggon-cv" target="_blank" rel="noreferrer">CV ↗</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  
+</body>
+</html>
